@@ -1,35 +1,106 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, PieChart, Globe, Cpu, BarChart2, Lightbulb, Newspaper } from "lucide-react";
+import { Home, PieChart, BarChart2, Lightbulb, Newspaper, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+
+const Logo = () => (
+  <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+    <circle cx="19" cy="19" r="19" fill="#38bdf8"/>
+    <path d="M11 25L19 13L27 25" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="19" cy="25" r="2" fill="#fff"/>
+  </svg>
+);
 
 const navItems = [
-  { to: "/home", label: "Home", icon: <Home size={18} /> },
-  { to: "/portfolio", label: "Portfolio", icon: <PieChart size={18} /> },
-  { to: "/nationalnews", label: "National News", icon: <Newspaper size={18} /> },
-  { to: "/aiprediction", label: "AI Prediction", icon: <Cpu size={18} /> },
-  { to: "/impact", label: "Impact", icon: <BarChart2 size={18} /> },
-  { to: "/globalnews", label: "Global News", icon: <Globe size={18} /> },
-  { to: "/suggestions", label: "Suggestions", icon: <Lightbulb size={18} /> },
+  { to: "/home", label: "Home", icon: <Home size={20} /> },
+  { to: "/portfolio", label: "Portfolio", icon: <PieChart size={20} /> },
+  { to: "/impact", label: "Impact", icon: <BarChart2 size={20} /> },
+  { to: "/aiprediction", label: "AI Prediction", icon: <Lightbulb size={20} /> },
+  { to: "/nationalnews", label: "News", icon: <Newspaper size={20} /> },
+  { to: "/suggestions", label: "Suggestions", icon: <BarChart2 size={20} /> },
+  { to: "/settings", label: "Settings", icon: <Settings size={20} /> }, // <-- This line links to Settings.jsx
 ];
 
-const Sidebar = () => {
+const SIDEBAR_WIDTH = 240;
+const SIDEBAR_MINI = 64;
+
+const Sidebar = ({ onSidebarToggle }) => {
+  const [minimized, setMinimized] = useState(false);
+
+  const handleToggle = () => {
+    setMinimized(m => {
+      const next = !m;
+      if (onSidebarToggle) onSidebarToggle(next ? SIDEBAR_MINI : SIDEBAR_WIDTH);
+      return next;
+    });
+  };
+
   return (
-    <aside className="w-60 fixed top-0 left-0 h-full bg-[#0d1b2a] text-gray-200 shadow-lg z-40">
-      <div className="px-6 py-4 text-xl font-bold text-green-400 tracking-wide">
-        FinAI
+    <aside
+      className="fixed top-0 left-0 h-full bg-gradient-to-b from-[#0d1b2a] via-[#1b263b] to-[#16213e] text-gray-200 shadow-2xl z-40"
+      style={{
+        width: minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH,
+        minWidth: minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH,
+        transition: "width 0.45s cubic-bezier(.77,0,.18,1), min-width 0.45s cubic-bezier(.77,0,.18,1)",
+      }}
+    >
+      <div className="flex items-center gap-3 px-3 py-7 select-none relative">
+        <Logo />
+        <span
+          className={`text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-green-300 to-blue-500 bg-clip-text text-transparent drop-shadow-lg transition-all duration-500
+            ${minimized ? "opacity-0 w-0 ml-0" : "opacity-100 ml-2 w-auto"}
+          `}
+          style={{
+            fontFamily: "'Space Grotesk', Arial, sans-serif",
+            letterSpacing: "-0.04em",
+            transition: "opacity 0.35s, margin 0.35s, width 0.45s cubic-bezier(.77,0,.18,1)",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            maxWidth: minimized ? 0 : 160,
+          }}
+        >
+          Fin<span className="font-black text-white drop-shadow">Hub</span>
+        </span>
+        <button
+          className="absolute -right-4 top-1/2 -translate-y-1/2 bg-[#1b263b] border border-slate-700 rounded-full p-1 shadow hover:bg-[#16213e] transition z-50"
+          style={{ width: 28, height: 28 }}
+          onClick={handleToggle}
+          aria-label={minimized ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {minimized ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
       </div>
-      <nav className="flex flex-col space-y-2 px-4">
+      <nav className="flex flex-col space-y-2 px-2">
         {navItems.map(({ to, label, icon }) => (
           <NavLink
             key={label}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:bg-[#1b263b] transition ${
-                isActive ? "bg-[#1b263b] text-green-400 font-medium" : "text-gray-300"
-              }`
+              `flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium hover:bg-[#1b263b] transition card-hover ${
+                isActive ? "bg-[#1b263b] text-green-400 font-semibold" : "text-gray-300"
+              } ${minimized ? "justify-center px-2" : ""}`
             }
+            style={{
+              fontFamily: "'Space Grotesk', Arial, sans-serif",
+              fontSize: "1rem", // Ensure same font size
+              minHeight: 44, // Consistent height for both states
+            }}
           >
-            {icon}
-            {label}
+            <span style={{ display: "flex", alignItems: "center" }}>
+              {icon}
+            </span>
+            <span
+              className={`transition-all duration-500 ${minimized ? "opacity-0 w-0 ml-0" : "opacity-100 w-auto ml-2"}`}
+              style={{
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                maxWidth: minimized ? 0 : 120,
+                transition: "opacity 0.35s, margin 0.35s, width 0.45s cubic-bezier(.77,0,.18,1)",
+                display: minimized ? "inline-block" : "inline",
+                fontSize: "1rem", // Ensure same font size
+              }}
+            >
+              {label}
+            </span>
           </NavLink>
         ))}
       </nav>

@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+/* Custom dark mode and gradient backgrounds */
+body {
+  @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white min-h-screen;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  background: #1b263b;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 8px;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-200 transform hover:scale-105 hover:shadow-2xl;
+}
