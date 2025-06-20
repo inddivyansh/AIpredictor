@@ -1,24 +1,24 @@
 // src/pages/AIPrediction.jsx
 import { useEffect, useState } from "react";
-import { Search, LogIn, UserPlus } from "lucide-react";
-import { fetchTopGainers, fetchTopLosers, fetchBusinessNews } from "../services/finnhubApi";
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as PieTooltip } from "recharts";
+import { fetchTopGainers, fetchTopLosers, fetchBusinessNews } from "../services/finnhubApi";
+import { Search, LogIn, UserPlus } from "lucide-react";
 import Sentiment from "sentiment";
+import { PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer } from "recharts";
 
-const COLORS = ["#34d399", "#facc15", "#f87171"];
+const COLORS = ["#38bdf8", "#facc15", "#f87171"];
 
 const AIPrediction = ({ sidebarWidth }) => {
   const [stripType, setStripType] = useState("gainers");
   const [stripData, setStripData] = useState([]);
   const [search, setSearch] = useState("");
-  const [sentimentInsights, setSentimentInsights] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
   const [sentimentData, setSentimentData] = useState([
     { name: "Positive", value: 0 },
     { name: "Neutral", value: 0 },
     { name: "Negative", value: 0 },
   ]);
+  const [sentimentInsights, setSentimentInsights] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     let timeout;
@@ -54,7 +54,6 @@ const AIPrediction = ({ sidebarWidth }) => {
         { name: "Neutral", value: neu },
         { name: "Negative", value: neg },
       ]);
-
       // Example: Generate suggestions based on sentiment
       const portfolio = ["XOM", "AAPL", "BP"];
       const sugg = portfolio.map(stock => {
@@ -78,11 +77,11 @@ const AIPrediction = ({ sidebarWidth }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      style={{ paddingLeft: 0 }} // <-- flush with sidebar
+      style={{ paddingLeft: 0 }}
     >
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-8 py-3 bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
-        <div className="flex-1 flex items-center overflow-x-hidden">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-2 sm:px-6 py-3 bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
+        <div className="flex-1 flex items-center overflow-x-hidden w-full">
           <div className="whitespace-nowrap text-sm font-semibold text-blue-300 flex items-center gap-2 animate-marquee" style={{ minWidth: "60%" }}>
             {stripType === "gainers" ? "Top Gainers:" : "Top Losers:"}
             {stripData.map((item, i) => (
@@ -92,23 +91,22 @@ const AIPrediction = ({ sidebarWidth }) => {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 mt-2 md:mt-0">
+          <div className="relative w-full max-w-[180px]">
             <input
               type="text"
-              className="bg-slate-700 text-slate-200 rounded-full px-4 py-1 pl-9 outline-none focus:ring-2 focus:ring-blue-400"
+              className="bg-slate-700 text-slate-200 rounded-full px-4 py-1 pl-9 outline-none focus:ring-2 focus:ring-blue-400 w-full"
               placeholder="Search stocks..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: 180 }}
             />
             <Search className="absolute left-2 top-1.5 text-slate-400" size={18} />
           </div>
-          <button className="ml-4 px-4 py-1 rounded-full bg-blue-500 text-white font-semibold flex items-center gap-1 hover:bg-blue-600 transition">
-            <LogIn size={18} /> Sign In
+          <button className="px-4 py-1 rounded-full bg-blue-500 text-white font-semibold flex items-center gap-1 hover:bg-blue-600 transition">
+            <LogIn size={18} /> <span className="hidden sm:inline">Sign In</span>
           </button>
-          <button className="ml-2 px-4 py-1 rounded-full bg-green-500 text-white font-semibold flex items-center gap-1 hover:bg-green-600 transition">
-            <UserPlus size={18} /> Register
+          <button className="px-4 py-1 rounded-full bg-green-500 text-white font-semibold flex items-center gap-1 hover:bg-green-600 transition">
+            <UserPlus size={18} /> <span className="hidden sm:inline">Register</span>
           </button>
         </div>
         <style>{`
@@ -122,14 +120,9 @@ const AIPrediction = ({ sidebarWidth }) => {
         `}</style>
       </div>
       {/* Content */}
-      <div className="mt-6 px-4 sm:px-8">
-        <h2
-          className="text-3xl font-bold mb-6 tracking-wide"
-          style={{ fontFamily: "'Space Grotesk', Arial, sans-serif" }}
-        >
-          💡 Suggestions
-        </h2>
-        <div className="grid md:grid-cols-2 gap-6">
+      <div className="mt-6 px-2 sm:px-4 md:px-8">
+        <h2 className="text-3xl font-bold mb-6 tracking-wide">💡 Suggestions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-slate-800 bg-opacity-80 rounded-2xl shadow-md p-6 flex flex-col items-center min-h-[320px]">
             <h3 className="text-lg font-semibold mb-4 text-green-300">Market Sentiment</h3>
             <div className="w-full flex justify-center items-center mb-4">

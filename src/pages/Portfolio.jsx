@@ -26,14 +26,7 @@ const sectorData = Object.values(
   }, {})
 );
 
-const tabList = [
-  { key: "value", label: "Portfolio Value" },
-  { key: "investment", label: "Total Investment" },
-  { key: "profit", label: "Profit / Loss" },
-];
-
 const Portfolio = ({ sidebarWidth }) => {
-  const [tab, setTab] = useState("value");
   const [stripType, setStripType] = useState("gainers");
   const [stripData, setStripData] = useState([]);
   const [search, setSearch] = useState("");
@@ -62,10 +55,6 @@ const Portfolio = ({ sidebarWidth }) => {
   useEffect(() => {
     fetchStockChart(selectedSymbol, timeframe).then(setChartData);
   }, [selectedSymbol, timeframe]);
-
-  const totalValue = portfolioStocks.reduce((a, b) => a + b.value, 0);
-  const totalInvested = portfolioStocks.reduce((a, b) => a + b.invested, 0);
-  const totalProfit = totalValue - totalInvested;
 
   // Custom active shape for pie chart: label outside with arrow pin, no label in center
   const renderActiveShape = (props) => {
@@ -97,7 +86,6 @@ const Portfolio = ({ sidebarWidth }) => {
           strokeWidth={3}
           filter="url(#shadow)"
         />
-        {/* Arrow pin and label outside */}
         <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
         <circle cx={ex} cy={ey} r={4} fill={fill} stroke="white" strokeWidth={2} />
         <text
@@ -134,8 +122,8 @@ const Portfolio = ({ sidebarWidth }) => {
       style={{ paddingLeft: 0 }}
     >
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-8 py-3 bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
-        <div className="flex-1 flex items-center overflow-x-hidden">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-2 sm:px-6 py-3 bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
+        <div className="flex-1 flex items-center overflow-x-hidden w-full">
           <div className="whitespace-nowrap text-sm font-semibold text-blue-300 flex items-center gap-2 animate-marquee" style={{ minWidth: "60%" }}>
             {stripType === "gainers" ? "Top Gainers:" : "Top Losers:"}
             {stripData.map((item, i) => (
@@ -145,23 +133,22 @@ const Portfolio = ({ sidebarWidth }) => {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 mt-2 md:mt-0">
+          <div className="relative w-full max-w-[180px]">
             <input
               type="text"
-              className="bg-slate-700 text-slate-200 rounded-full px-4 py-1 pl-9 outline-none focus:ring-2 focus:ring-blue-400"
+              className="bg-slate-700 text-slate-200 rounded-full px-4 py-1 pl-9 outline-none focus:ring-2 focus:ring-blue-400 w-full"
               placeholder="Search stocks..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: 180 }}
             />
             <Search className="absolute left-2 top-1.5 text-slate-400" size={18} />
           </div>
-          <button className="ml-4 px-4 py-1 rounded-full bg-blue-500 text-white font-semibold flex items-center gap-1 hover:bg-blue-600 transition">
-            <LogIn size={18} /> Sign In
+          <button className="px-4 py-1 rounded-full bg-blue-500 text-white font-semibold flex items-center gap-1 hover:bg-blue-600 transition">
+            <LogIn size={18} /> <span className="hidden sm:inline">Sign In</span>
           </button>
-          <button className="ml-2 px-4 py-1 rounded-full bg-green-500 text-white font-semibold flex items-center gap-1 hover:bg-green-600 transition">
-            <UserPlus size={18} /> Register
+          <button className="px-4 py-1 rounded-full bg-green-500 text-white font-semibold flex items-center gap-1 hover:bg-green-600 transition">
+            <UserPlus size={18} /> <span className="hidden sm:inline">Register</span>
           </button>
         </div>
         <style>{`
@@ -175,11 +162,11 @@ const Portfolio = ({ sidebarWidth }) => {
         `}</style>
       </div>
       {/* Content */}
-      <div className="p-2 sm:p-6 md:p-10 flex flex-col gap-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="p-2 sm:p-4 md:p-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-10">
           {/* Top Left: Portfolio Summary */}
-          <div className="order-1 md:order-1 flex flex-col items-start">
-            <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-5 w-full max-w-xs">
+          <div className="order-1 md:order-1 flex flex-col items-start w-full">
+            <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-4 sm:p-6 w-full">
               <h3 className="text-base font-semibold mb-2 text-yellow-300 flex items-center gap-2">
                 <span>Portfolio Summary</span>
                 <span className="text-xs bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full">
@@ -207,10 +194,10 @@ const Portfolio = ({ sidebarWidth }) => {
             </div>
           </div>
           {/* Top Right: Stock Trend */}
-          <div className="order-3 md:order-2 flex flex-col items-center">
+          <div className="order-3 md:order-2 flex flex-col items-center w-full">
             <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-4 flex flex-col items-center w-full">
               <h3 className="text-base font-semibold mb-2 text-green-300">Stock Trend</h3>
-              <div className="w-full min-w-[120px]">
+              <div className="w-full min-w-[160px] h-[220px]">
                 <DarkLineChart
                   data={chartData}
                   timeframe={timeframe}
@@ -223,59 +210,61 @@ const Portfolio = ({ sidebarWidth }) => {
             </div>
           </div>
           {/* Bottom Left: Pie Chart */}
-          <div className="order-2 md:order-3 flex flex-col items-center">
+          <div className="order-2 md:order-3 flex flex-col items-center w-full">
             <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-4 flex flex-col items-center w-full mb-6">
               <h3 className="text-base font-semibold mb-2 text-blue-300">Sector Allocation</h3>
-              <ResponsiveContainer width="100%" minWidth={200} height={260}>
-                <PieChart>
-                  <defs>
-                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.25" />
-                    </filter>
-                  </defs>
-                  <Pie
-                    activeIndex={activeIndex}
-                    activeShape={renderActiveShape}
-                    data={sectorData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={0}
-                    outerRadius={80}
-                    fill="#38bdf8"
-                    dataKey="value"
-                    onMouseEnter={(_, idx) => setActiveIndex(idx)}
-                    onMouseLeave={() => setActiveIndex(-1)}
-                    paddingAngle={2}
-                    label={false}
-                  >
-                    {sectorData.map((entry, idx) => (
-                      <Cell
-                        key={`cell-${idx}`}
-                        fill={COLORS[idx % COLORS.length]}
-                        opacity={activeIndex === -1 || activeIndex === idx ? 1 : 0.25}
-                        style={{ transition: "opacity 0.3s" }}
-                      />
-                    ))}
-                  </Pie>
-                  <PieTooltip
-                    wrapperStyle={{ zIndex: 1000 }}
-                    content={({ active, payload }) =>
-                      active && payload && payload.length ? (
-                        <div className="bg-slate-800 text-slate-100 p-2 rounded shadow">
-                          <div className="font-semibold">{payload[0].name}</div>
-                          <div>₹{payload[0].value.toLocaleString()}</div>
-                        </div>
-                      ) : null
-                    }
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="w-full min-w-[160px] h-[220px]">
+                <ResponsiveContainer width="100%" minWidth={160} height={220}>
+                  <PieChart>
+                    <defs>
+                      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.25" />
+                      </filter>
+                    </defs>
+                    <Pie
+                      activeIndex={activeIndex}
+                      activeShape={renderActiveShape}
+                      data={sectorData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={0}
+                      outerRadius={80}
+                      fill="#38bdf8"
+                      dataKey="value"
+                      onMouseEnter={(_, idx) => setActiveIndex(idx)}
+                      onMouseLeave={() => setActiveIndex(-1)}
+                      paddingAngle={2}
+                      label={false}
+                    >
+                      {sectorData.map((entry, idx) => (
+                        <Cell
+                          key={`cell-${idx}`}
+                          fill={COLORS[idx % COLORS.length]}
+                          opacity={activeIndex === -1 || activeIndex === idx ? 1 : 0.25}
+                          style={{ transition: "opacity 0.3s" }}
+                        />
+                      ))}
+                    </Pie>
+                    <PieTooltip
+                      wrapperStyle={{ zIndex: 1000 }}
+                      content={({ active, payload }) =>
+                        active && payload && payload.length ? (
+                          <div className="bg-slate-800 text-slate-100 p-2 rounded shadow">
+                            <div className="font-semibold">{payload[0].name}</div>
+                            <div>₹{payload[0].value.toLocaleString()}</div>
+                          </div>
+                        ) : null
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
           {/* Bottom Right: Table */}
-          <div className="order-4 md:order-4 flex flex-col min-w-0">
+          <div className="order-4 md:order-4 flex flex-col min-w-0 w-full">
             <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/60 mb-6">
-              <table className="w-full text-sm table-fixed">
+              <table className="w-full min-w-[400px] text-sm table-fixed">
                 <colgroup>
                   <col style={{ width: "24%" }} />
                   <col style={{ width: "22%" }} />

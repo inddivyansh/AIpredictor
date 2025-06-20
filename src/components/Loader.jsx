@@ -19,7 +19,7 @@ const Loader = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full min-h-[70vh]">
+    <div className="flex flex-col items-center justify-center w-full h-full min-h-[50vh]">
       <div className="flex gap-4 items-center justify-center h-[60px]">
         {[0, 1, 2].map(i => (
           <span
@@ -33,7 +33,7 @@ const Loader = () => {
           </span>
         ))}
       </div>
-
+      <div className="mt-4 text-slate-400 text-lg font-semibold">Loading...</div>
       <style>{`
         .loader-dot {
           width: 22px;

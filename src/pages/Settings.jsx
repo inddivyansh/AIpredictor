@@ -4,15 +4,15 @@ import { User, Bell, Lock } from "lucide-react";
 const Settings = () => {
   return (
     <motion.div
-      className="p-4 sm:p-8 max-w-2xl mx-auto"
+      className="p-2 sm:p-4 md:p-8 max-w-2xl mx-auto w-full overflow-x-auto"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <h2 className="text-3xl font-bold mb-8 text-green-400 flex items-center gap-2">
-        <Lock size={28} className="text-blue-400" /> Settings
+      <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-green-400 flex items-center gap-2">
+        <Lock size={24} className="text-blue-400" /> Settings
       </h2>
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-2xl shadow-xl p-8 space-y-10 border-2 border-green-500">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-2xl shadow-xl p-4 sm:p-8 space-y-8 sm:space-y-10 border-2 border-green-500">
         {/* Profile Section */}
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -23,7 +23,7 @@ const Settings = () => {
             <div className="flex flex-col gap-2 w-full">
               <label className="text-slate-400 text-sm">Name</label>
               <input
-                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition"
+                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition w-full"
                 value="Aarav Sharma"
                 readOnly
               />
@@ -31,7 +31,7 @@ const Settings = () => {
             <div className="flex flex-col gap-2 w-full">
               <label className="text-slate-400 text-sm">Email</label>
               <input
-                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition"
+                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition w-full"
                 value="aarav.sharma@email.com"
                 readOnly
               />
@@ -41,7 +41,7 @@ const Settings = () => {
             <div className="flex flex-col gap-2 w-full">
               <label className="text-slate-400 text-sm">Phone</label>
               <input
-                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition"
+                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition w-full"
                 value="+91 98765 43210"
                 readOnly
               />
@@ -49,7 +49,7 @@ const Settings = () => {
             <div className="flex flex-col gap-2 w-full">
               <label className="text-slate-400 text-sm">Location</label>
               <input
-                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition"
+                className="bg-slate-800 border border-green-500 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-green-400 transition w-full"
                 value="Mumbai, India"
                 readOnly
               />
@@ -75,7 +75,7 @@ const Settings = () => {
             <Lock size={20} className="text-blue-300" />
             <h3 className="text-lg font-semibold text-blue-300">Security</h3>
           </div>
-          <button className="bg-gradient-to-r from-green-700 to-green-500 hover:from-green-800 hover:to-green-600 text-white px-6 py-2 rounded-lg transition font-semibold shadow border-2 border-green-500">
+          <button className="bg-gradient-to-r from-green-700 to-green-500 hover:from-green-800 hover:to-green-600 text-white px-6 py-2 rounded-lg transition font-semibold shadow border-2 border-green-500 w-full sm:w-auto">
             Change Password
           </button>
         </section>
