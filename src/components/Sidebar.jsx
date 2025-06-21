@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { Home, PieChart, BarChart2, Lightbulb, Newspaper, Settings, ChevronLeft, ChevronRight, Menu } from "lucide-react";
 
 const Logo = () => (
@@ -23,18 +23,34 @@ const navItems = [
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_MINI = 64;
 
-const Sidebar = ({ onSidebarToggle }) => {
-  const [minimized, setMinimized] = useState(false);
+const Sidebar = ({ onSidebarToggle, minimized: minimizedProp, setMinimized: setMinimizedProp }) => {
+  const location = useLocation();
+  // Use controlled minimized state if provided, else fallback to local state
+  const [minimizedLocal, setMinimizedLocal] = useState(false);
+  const minimized = typeof minimizedProp === "boolean" ? minimizedProp : minimizedLocal;
+  const setMinimized = setMinimizedProp || setMinimizedLocal;
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Responsive toggle for mobile
   const handleToggle = () => {
     setMinimized(m => {
-      const next = !m;
+      const next = typeof m === "boolean" ? !m : !minimized;
       if (onSidebarToggle) onSidebarToggle(next ? SIDEBAR_MINI : SIDEBAR_WIDTH);
       return next;
     });
   };
+
+  // Keep sidebar minimized on home, expanded elsewhere (if controlled from App)
+  useEffect(() => {
+    if (setMinimizedProp) {
+      if (location.pathname === "/home" || location.pathname === "/") {
+        setMinimizedProp(true);
+      } else {
+        setMinimizedProp(false);
+      }
+    }
+    // eslint-disable-next-line
+  }, [location.pathname]);
 
   return (
     <>

@@ -1,8 +1,8 @@
 // src/pages/Suggestions.jsx
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { fetchBusinessNews, fetchTopGainers, fetchTopLosers } from "../services/finnhubApi";
-import { Search, LogIn, UserPlus, Lightbulb } from "lucide-react";
+import { Search, LogIn, UserPlus, Lightbulb, ExternalLink, X } from "lucide-react";
 import Sentiment from "sentiment";
 
 const trackedStocks = [
@@ -15,6 +15,8 @@ const Suggestions = ({ sidebarWidth }) => {
   const [search, setSearch] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     let timeout;
@@ -37,7 +39,6 @@ const Suggestions = ({ sidebarWidth }) => {
     setLoading(true);
     fetchBusinessNews("IN", 30).then(news => {
       const sentiment = new Sentiment();
-      // For each tracked stock, analyze news and generate suggestion
       const suggestions = trackedStocks.map(stock => {
         const related = news.filter(
           n =>
@@ -50,6 +51,7 @@ const Suggestions = ({ sidebarWidth }) => {
             action: "Hold",
             reason: "No recent news found. Hold position.",
             icon: <Lightbulb size={28} className="text-yellow-400" />,
+            relatedNews: [],
           };
         }
         const avg = related.reduce((sum, n) => sum + sentiment.analyze(n.summary).score, 0) / related.length;
@@ -67,12 +69,23 @@ const Suggestions = ({ sidebarWidth }) => {
           action,
           reason: `Avg sentiment from ${related.length} news: ${avg.toFixed(2)}`,
           icon,
+          relatedNews: related,
         };
       });
       setAiSuggestions(suggestions);
       setLoading(false);
     });
   }, []);
+
+  const handleExpand = idx => {
+    setExpanded(idx);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setExpanded(null);
+  };
 
   return (
     <motion.div
@@ -134,7 +147,12 @@ const Suggestions = ({ sidebarWidth }) => {
                 s.reason.toLowerCase().includes(search.toLowerCase())
               )
               .map((s, idx) => (
-                <div key={idx} className="bg-slate-800 bg-opacity-80 rounded-2xl shadow-md p-6 flex flex-col gap-2 card-hover">
+                <motion.div
+                  key={idx}
+                  className="bg-slate-800 bg-opacity-80 rounded-2xl shadow-md p-6 flex flex-col gap-2 card-hover cursor-pointer"
+                  whileHover={{ scale: 1.04, boxShadow: "0 8px 32px 0 rgba(0,0,0,0.25)" }}
+                  onClick={() => handleExpand(idx)}
+                >
                   <div className="flex items-center gap-3 mb-2">
                     {s.icon}
                     <span className="text-lg font-semibold text-blue-300">{s.stock}</span>
@@ -147,11 +165,90 @@ const Suggestions = ({ sidebarWidth }) => {
                     </span>
                   </div>
                   <p className="text-sm text-slate-200">{s.reason}</p>
-                </div>
+                </motion.div>
               ))}
           </div>
         )}
       </div>
+      {/* Expanded Modal */}
+      <AnimatePresence>
+        {showModal && expanded !== null && aiSuggestions[expanded] && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ backdropFilter: "blur(4px)" }}
+            onClick={handleCloseModal}
+          >
+            <motion.div
+              className="bg-slate-900 rounded-2xl shadow-2xl p-0 w-full max-w-2xl relative flex flex-col items-stretch"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                height: "500px",
+                maxHeight: "90vh",
+                width: "540px",
+                minWidth: "320px",
+                overflow: "hidden",
+                display: "flex"
+              }}
+            >
+              <button
+                className="absolute top-4 right-4 text-slate-400 hover:text-red-400 text-2xl z-10"
+                onClick={handleCloseModal}
+                title="Close"
+              >
+                <X size={28} />
+              </button>
+              <div className="flex flex-col items-center pt-8 pb-2">
+                <span className="text-2xl font-bold text-blue-300 tracking-wide mb-1" style={{ wordBreak: "break-all" }}>
+                  {aiSuggestions[expanded]?.stock || ""}
+                </span>
+                <span className={`text-sm font-semibold rounded-full px-3 py-1 ${
+                  aiSuggestions[expanded]?.action === "Buy" ? "bg-green-600 text-white" :
+                  aiSuggestions[expanded]?.action === "Sell" ? "bg-red-600 text-white" :
+                  "bg-yellow-500 text-white"
+                }`}>
+                  {aiSuggestions[expanded]?.action || ""}
+                </span>
+                <p className="text-slate-300 mt-2">{aiSuggestions[expanded]?.reason}</p>
+              </div>
+              {/* News section: always rendered, always scrollable */}
+              <div
+                className="flex-1 w-full px-8 pb-6 pt-2 overflow-y-auto"
+                style={{
+                  borderTop: "1px solid #334155",
+                  background: "rgba(30,41,59,0.98)"
+                }}
+              >
+                <h3 className="text-lg font-semibold text-white mb-3">Related News Articles</h3>
+                <div className="space-y-3">
+                  {(aiSuggestions[expanded]?.relatedNews?.length ?? 0) === 0 ? (
+                    <div className="text-slate-400 text-sm">No related news found for this stock.</div>
+                  ) : (
+                    aiSuggestions[expanded].relatedNews.map((newsItem, index) => (
+                      <div key={index} className="bg-slate-800 rounded-lg p-4 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-blue-300">{newsItem.source || ""}</span>
+                          <span className="text-xs text-slate-400">{newsItem.datetime ? new Date(newsItem.datetime).toLocaleString() : ""}</span>
+                        </div>
+                        <a href={newsItem.url} target="_blank" rel="noopener noreferrer" className="text-md font-semibold text-white hover:underline flex items-center gap-1">
+                          {newsItem.headline}
+                          <ExternalLink size={14} />
+                        </a>
+                        <p className="text-sm text-slate-200 line-clamp-2">{newsItem.summary}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

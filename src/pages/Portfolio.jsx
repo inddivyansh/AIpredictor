@@ -1,10 +1,10 @@
 // src/pages/Portfolio.jsx
 import { useEffect, useState } from "react";
-import { Search, LogIn, UserPlus } from "lucide-react";
+import { Search, LogIn, UserPlus, Maximize2, X } from "lucide-react";
 import { fetchStockChart, fetchTopGainers, fetchTopLosers } from "../services/finnhubApi";
 import DarkLineChart from "../components/DarkLineChart";
-import { PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer, Sector } from "recharts";
-import { motion } from "framer-motion";
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
 
 const portfolioStocks = [
   { ticker: "XOM", name: "Exxon Mobil", sector: "Energy", value: 3200, invested: 2500, profit: 700 },
@@ -34,6 +34,8 @@ const Portfolio = ({ sidebarWidth }) => {
   const [chartData, setChartData] = useState([]);
   const [timeframe, setTimeframe] = useState(1);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isTrendFullscreen, setIsTrendFullscreen] = useState(false);
+  const [showTrend, setShowTrend] = useState(false);
 
   useEffect(() => {
     let timeout;
@@ -56,7 +58,12 @@ const Portfolio = ({ sidebarWidth }) => {
     fetchStockChart(selectedSymbol, timeframe).then(setChartData);
   }, [selectedSymbol, timeframe]);
 
-  // Custom active shape for pie chart: label outside with arrow pin, no label in center
+  // Calculate totals
+  const totalInvested = portfolioStocks.reduce((sum, s) => sum + s.invested, 0);
+  const totalValue = portfolioStocks.reduce((sum, s) => sum + s.value, 0);
+  const totalPL = portfolioStocks.reduce((sum, s) => sum + s.profit, 0);
+
+  // --- PIE CHART: 2D, spotlight glow and label only on hover ---
   const renderActiveShape = (props) => {
     const RADIAN = Math.PI / 180;
     const {
@@ -65,52 +72,100 @@ const Portfolio = ({ sidebarWidth }) => {
     } = props;
     const sin = Math.sin(-RADIAN * midAngle);
     const cos = Math.cos(-RADIAN * midAngle);
-    const sx = cx + (outerRadius + 10) * cos;
-    const sy = cy + (outerRadius + 10) * sin;
-    const mx = cx + (outerRadius + 30) * cos;
-    const my = cy + (outerRadius + 30) * sin;
-    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-    const ey = my;
-    const textAnchor = cos >= 0 ? "start" : "end";
+
+    // Label position (outside, with leader line)
+    const labelRadius = outerRadius + 36;
+    let labelX = cx + labelRadius * cos;
+    let labelY = cy + labelRadius * (sin < 0 ? sin : -0.7);
+
+    // Clamp label to chart area
+    const chartWidth = 260;
+    const chartHeight = 220;
+    labelX = Math.max(10, Math.min(chartWidth - 10, labelX));
+    labelY = Math.max(20, Math.min(chartHeight - 10, labelY));
+
     return (
       <g>
+        {/* Main sector with glowing spotlight */}
         <Sector
           cx={cx}
           cy={cy}
           innerRadius={0}
-          outerRadius={outerRadius + 12}
+          outerRadius={outerRadius + 8}
           startAngle={startAngle}
           endAngle={endAngle}
           fill={fill}
           stroke="#fff"
           strokeWidth={3}
-          filter="url(#shadow)"
+          style={{
+            filter: "drop-shadow(0 0 16px #fff8), drop-shadow(0 0 8px " + fill + ")"
+          }}
         />
-        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-        <circle cx={ex} cy={ey} r={4} fill={fill} stroke="white" strokeWidth={2} />
+        {/* Leader line and dot */}
+        <path
+          d={`M${cx + outerRadius * cos},${cy + outerRadius * sin}L${labelX},${labelY}`}
+          stroke={fill}
+          strokeWidth={2.2}
+          fill="none"
+        />
+        <circle cx={labelX} cy={labelY} r={6} fill="#181e3a" stroke={fill} strokeWidth={3} />
+        {/* Label */}
         <text
-          x={ex + (cos >= 0 ? 8 : -8)}
-          y={ey}
-          textAnchor={textAnchor}
+          x={labelX}
+          y={labelY - 12}
+          textAnchor="middle"
           fill="#fff"
           fontSize={15}
           fontWeight={700}
-          alignmentBaseline="middle"
+          alignmentBaseline="bottom"
+          style={{ textShadow: "0 2px 8px #000, 0 0 2px #000" }}
         >
           {payload.name}
         </text>
         <text
-          x={ex + (cos >= 0 ? 8 : -8)}
-          y={ey + 20}
-          textAnchor={textAnchor}
-          fill="#cbd5e1"
+          x={labelX}
+          y={labelY + 12}
+          textAnchor="middle"
+          fill="#b5e3ff"
           fontSize={13}
-          alignmentBaseline="middle"
+          alignmentBaseline="hanging"
+          style={{ textShadow: "0 2px 8px #000, 0 0 2px #000" }}
         >
           ₹{value.toLocaleString()} ({(percent * 100).toFixed(1)}%)
         </text>
       </g>
     );
+  };
+
+  // Helper to shade color for 3D side wall
+  function shadeColor(color, percent) {
+    // color: "#38bdf8" or "#facc15"
+    let R = parseInt(color.substring(1,3),16);
+    let G = parseInt(color.substring(3,5),16);
+    let B = parseInt(color.substring(5,7),16);
+    R = parseInt(R * (100 + percent) / 100);
+    G = parseInt(G * (100 + percent) / 100);
+    B = parseInt(B * (100 + percent) / 100);
+    R = (R<255)?R:255;  
+    G = (G<255)?G:255;  
+    B = (B<255)?B:255;  
+    const RR = ((R.toString(16).length===1)?"0":"") + R.toString(16);
+    const GG = ((G.toString(16).length===1)?"0":"") + G.toString(16);
+    const BB = ((B.toString(16).length===1)?"0":"") + B.toString(16);
+    return "#"+RR+GG+BB;
+  }
+
+  // When a stock is clicked, show the trend in fullscreen
+  const handleStockClick = (ticker) => {
+    setSelectedSymbol(ticker);
+    setShowTrend(true);
+    setIsTrendFullscreen(true);
+  };
+
+  // Hide trend when modal closes
+  const handleCloseTrend = () => {
+    setIsTrendFullscreen(false);
+    setTimeout(() => setShowTrend(false), 300); // Wait for animation
   };
 
   return (
@@ -163,9 +218,28 @@ const Portfolio = ({ sidebarWidth }) => {
       </div>
       {/* Content */}
       <div className="p-2 sm:p-4 md:p-8 max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-10">
-          {/* Top Left: Portfolio Summary */}
-          <div className="order-1 md:order-1 flex flex-col items-start w-full">
+        {/* Info Buttons Row */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-slate-800 rounded-xl px-4 py-4 flex flex-col items-center shadow border border-slate-700">
+            <span className="text-xs text-slate-400 mb-1">Total Invested</span>
+            <span className="text-lg font-bold text-blue-400">₹{totalInvested.toLocaleString()}</span>
+          </div>
+          <div className="bg-slate-800 rounded-xl px-4 py-4 flex flex-col items-center shadow border border-slate-700">
+            <span className="text-xs text-slate-400 mb-1">Current Value</span>
+            <span className="text-lg font-bold text-green-400">₹{totalValue.toLocaleString()}</span>
+          </div>
+          <div className="bg-slate-800 rounded-xl px-4 py-4 flex flex-col items-center shadow border border-slate-700">
+            <span className="text-xs text-slate-400 mb-1">Current P/L</span>
+            <span className={`text-lg font-bold ${totalPL >= 0 ? "text-green-400" : "text-red-400"}`}>
+              ₹{totalPL.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Main Content: Portfolio Summary + Table */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+          {/* Left: Portfolio Summary & Pie */}
+          <div className="flex flex-col items-start w-full">
             <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-4 sm:p-6 w-full">
               <h3 className="text-base font-semibold mb-2 text-yellow-300 flex items-center gap-2">
                 <span>Portfolio Summary</span>
@@ -185,84 +259,60 @@ const Portfolio = ({ sidebarWidth }) => {
                   {portfolioStocks.reduce((worst, s) => (s.profit < (worst?.profit ?? Infinity) ? s : worst), null)?.ticker || "-"}
                 </span>
               </div>
-              <div className="text-slate-300 text-sm">
+              <div className="text-slate-300 text-sm mb-4">
                 <span className="font-semibold">Most Invested:</span>{" "}
                 <span className="text-blue-400">
                   {portfolioStocks.reduce((max, s) => (s.invested > (max?.invested ?? -Infinity) ? s : max), null)?.ticker || "-"}
                 </span>
               </div>
-            </div>
-          </div>
-          {/* Top Right: Stock Trend */}
-          <div className="order-3 md:order-2 flex flex-col items-center w-full">
-            <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-4 flex flex-col items-center w-full">
-              <h3 className="text-base font-semibold mb-2 text-green-300">Stock Trend</h3>
-              <div className="w-full min-w-[160px] h-[220px]">
-                <DarkLineChart
-                  data={chartData}
-                  timeframe={timeframe}
-                  setTimeframe={setTimeframe}
-                />
-              </div>
-              <div className="mt-2 text-xs text-slate-400">
-                Showing: <span className="font-semibold">{selectedSymbol}</span>
-              </div>
-            </div>
-          </div>
-          {/* Bottom Left: Pie Chart */}
-          <div className="order-2 md:order-3 flex flex-col items-center w-full">
-            <div className="bg-slate-900 bg-opacity-90 rounded-2xl shadow p-4 flex flex-col items-center w-full mb-6">
-              <h3 className="text-base font-semibold mb-2 text-blue-300">Sector Allocation</h3>
-              <div className="w-full min-w-[160px] h-[220px]">
-                <ResponsiveContainer width="100%" minWidth={160} height={220}>
-                  <PieChart>
-                    <defs>
-                      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.25" />
-                      </filter>
-                    </defs>
-                    <Pie
-                      activeIndex={activeIndex}
-                      activeShape={renderActiveShape}
-                      data={sectorData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={0}
-                      outerRadius={80}
-                      fill="#38bdf8"
-                      dataKey="value"
-                      onMouseEnter={(_, idx) => setActiveIndex(idx)}
-                      onMouseLeave={() => setActiveIndex(-1)}
-                      paddingAngle={2}
-                      label={false}
-                    >
-                      {sectorData.map((entry, idx) => (
-                        <Cell
-                          key={`cell-${idx}`}
-                          fill={COLORS[idx % COLORS.length]}
-                          opacity={activeIndex === -1 || activeIndex === idx ? 1 : 0.25}
-                          style={{ transition: "opacity 0.3s" }}
-                        />
-                      ))}
-                    </Pie>
-                    <PieTooltip
-                      wrapperStyle={{ zIndex: 1000 }}
-                      content={({ active, payload }) =>
-                        active && payload && payload.length ? (
-                          <div className="bg-slate-800 text-slate-100 p-2 rounded shadow">
-                            <div className="font-semibold">{payload[0].name}</div>
-                            <div>₹{payload[0].value.toLocaleString()}</div>
-                          </div>
-                        ) : null
-                      }
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+              {/* Sectors Invested Pie Chart */}
+              <div className="mt-6">
+                <h4 className="text-sm font-semibold text-blue-300 mb-2">Sectors Invested</h4>
+                <div className="w-full flex items-center justify-center">
+                  <ResponsiveContainer width={260} height={220}>
+                    <PieChart>
+                      <defs>
+                        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.25" />
+                        </filter>
+                      </defs>
+                      <Pie
+                        data={sectorData}
+                        cx={130}
+                        cy={110}
+                        innerRadius={0}
+                        outerRadius={70}
+                        fill="#38bdf8"
+                        dataKey="value"
+                        activeIndex={activeIndex}
+                        activeShape={renderActiveShape}
+                        onMouseEnter={(_, idx) => setActiveIndex(idx)}
+                        onMouseLeave={() => setActiveIndex(-1)}
+                        paddingAngle={2}
+                        label={false}
+                        isAnimationActive={true}
+                        animationDuration={400}
+                      >
+                        {sectorData.map((entry, idx) => (
+                          <Cell
+                            key={`cell-summary-${idx}`}
+                            fill={COLORS[idx % COLORS.length]}
+                            opacity={activeIndex === -1 || activeIndex === idx ? 1 : 0.18}
+                            style={{
+                              filter: activeIndex === idx ? "drop-shadow(0 0 8px #fff8)" : "none",
+                              transition: "opacity 0.4s cubic-bezier(.4,2,.6,1), filter 0.4s cubic-bezier(.4,2,.6,1)"
+                            }}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>
-          {/* Bottom Right: Table */}
-          <div className="order-4 md:order-4 flex flex-col min-w-0 w-full">
+          {/* Right: Table */}
+          <div className="flex flex-col min-w-0 w-full">
             <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/60 mb-6">
               <table className="w-full min-w-[400px] text-sm table-fixed">
                 <colgroup>
@@ -286,7 +336,7 @@ const Portfolio = ({ sidebarWidth }) => {
                     .filter(s => !search || s.ticker.toLowerCase().includes(search.toLowerCase()))
                     .map(s => (
                       <tr key={s.ticker} className="border-b border-slate-700 hover:bg-slate-700/30">
-                        <td className="py-2 pl-4 font-semibold cursor-pointer truncate text-left" onClick={() => setSelectedSymbol(s.ticker)}>
+                        <td className="py-2 pl-4 font-semibold cursor-pointer truncate text-left" onClick={() => handleStockClick(s.ticker)}>
                           <span className={selectedSymbol === s.ticker ? "underline text-blue-400" : ""}>{s.ticker}</span>
                         </td>
                         <td className="truncate text-left">{s.sector}</td>
@@ -301,6 +351,48 @@ const Portfolio = ({ sidebarWidth }) => {
           </div>
         </div>
       </div>
+
+      {/* Fullscreen Stock Trend Modal */}
+      <AnimatePresence>
+        {showTrend && isTrendFullscreen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ backdropFilter: "blur(4px)" }}
+          >
+            <motion.div
+              className="bg-slate-900 rounded-2xl shadow-2xl p-6 w-full max-w-3xl relative flex flex-col items-center"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+            >
+              <button
+                className="absolute top-4 right-4 text-slate-400 hover:text-red-400 text-2xl"
+                onClick={handleCloseTrend}
+                title="Close"
+              >
+                <X size={28} />
+              </button>
+              {/* Always show stock name above chart */}
+              <div className="w-full flex flex-col items-center mb-2">
+                <span className="text-2xl font-bold text-blue-300 tracking-wide mb-1" style={{ wordBreak: "break-all" }}>
+                  {selectedSymbol}
+                </span>
+                <span className="text-xs text-slate-400 mb-2">Stock Trend</span>
+              </div>
+              <div className="w-full h-[340px]">
+                <DarkLineChart
+                  data={chartData}
+                  timeframe={timeframe}
+                  setTimeframe={setTimeframe}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

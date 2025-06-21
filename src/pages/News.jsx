@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { fetchBusinessNews, fetchTopGainers, fetchTopLosers } from "../services/finnhubApi";
 import { Search, LogIn, UserPlus } from "lucide-react";
 import Sentiment from "sentiment";
+import { useLocation } from "react-router-dom";
+import companyList from "../data/companyList.json";
+import articleFilterList from "../data/articleFilterList.json";
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -13,20 +16,56 @@ function shuffleArray(array) {
   return array;
 }
 
-const NationalNews = ({ sidebarWidth }) => {
+const sentiment = new Sentiment();
+
+function getSentimentType(score) {
+  if (score > 1) return "positive";
+  if (score < -1) return "negative";
+  return "neutral";
+}
+
+// Helper: Extract company names mentioned in text using a list of known companies
+function extractCompanies(text, companies) {
+  const found = [];
+  for (const c of companies) {
+    // Case-insensitive, whole word match
+    const regex = new RegExp(`\\b${c.name}\\b|\\b${c.ticker}\\b`, "i");
+    if (regex.test(text)) found.push(c);
+  }
+  return found;
+}
+
+// Helper: Suggest action based on sentiment and context
+function getSuggestion(sentimentType, sentimentScore, companies) {
+  if (companies.length === 0) return "No major company mentioned";
+  // More nuanced suggestion logic
+  if (sentimentType === "positive") {
+    if (sentimentScore > 3) return `Strong Buy for ${companies.map(c => c.ticker).join(", ")}`;
+    return `Consider Buy for ${companies.map(c => c.ticker).join(", ")}`;
+  }
+  if (sentimentType === "negative") {
+    if (sentimentScore < -3) return `Strong Sell for ${companies.map(c => c.ticker).join(", ")}`;
+    return `Consider Sell for ${companies.map(c => c.ticker).join(", ")}`;
+  }
+  return `Hold or Watch for ${companies.map(c => c.ticker).join(", ")}`;
+}
+
+const News = ({ sidebarWidth }) => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stripType, setStripType] = useState("gainers");
   const [stripData, setStripData] = useState([]);
   const [search, setSearch] = useState("");
   const [sentiments, setSentiments] = useState([]);
+  const [sentimentFilter, setSentimentFilter] = useState("all"); // "all", "positive", "neutral", "negative"
+  const location = useLocation();
 
   useEffect(() => {
     fetchBusinessNews("IN", 20).then(news => {
       const shuffled = shuffleArray(news.slice(0));
       setArticles(shuffled.slice(0, 10));
-      const sentiment = new Sentiment();
-      setSentiments(shuffled.slice(0, 10).map(a => sentiment.analyze(a.summary).score));
+      const sentimentScores = shuffled.slice(0, 10).map(a => sentiment.analyze(a.summary).score);
+      setSentiments(sentimentScores);
       setLoading(false);
     });
   }, []);
@@ -48,15 +87,58 @@ const NationalNews = ({ sidebarWidth }) => {
     return () => clearTimeout(timeout);
   }, [stripType]);
 
-  // Filter Indian news based on keywords in headline or summary
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sentiment = params.get("sentiment");
+    if (sentiment === "positive" || sentiment === "neutral" || sentiment === "negative") {
+      setSentimentFilter(sentiment);
+    }
+  }, [location.search]);
+
+  // Filter Indian news based on keywords from articleFilterList
+  const filterKeywords = articleFilterList.map(f => f.keyword.toLowerCase());
   const indianNews = articles.filter(
     n =>
-      /india|nse|sensex|nifty|rbi|mumbai|inr|reliance|tata|infosys|hdfc|icici/i.test(
-        n.headline + n.summary
+      filterKeywords.some(kw =>
+        (n.headline + n.summary).toLowerCase().includes(kw)
       )
   );
   // If no Indian news, show all news
-  const displayNews = indianNews.length > 0 ? indianNews : articles;
+  let displayNews = indianNews.length > 0 ? indianNews : articles;
+
+  // Attach sentiment type and matched keywords to each news
+  displayNews = displayNews.map((item, idx) => {
+    const text = (item.headline + " " + item.summary).toLowerCase();
+    const matchedKeywords = filterKeywords.filter(kw => text.includes(kw));
+    return {
+      ...item,
+      sentimentType: getSentimentType(sentiments[idx] ?? 0),
+      sentimentScore: sentiments[idx] ?? 0,
+      matchedKeywords,
+    };
+  });
+
+  // Load company list (could be static or fetched)
+  // Example: [{ name: "Reliance", ticker: "RELIANCE" }, ...]
+  const companies = companyList;
+
+  // Attach company mentions and suggestions to each news
+  displayNews = displayNews.map((item, idx) => {
+    const text = `${item.headline} ${item.summary}`;
+    const mentioned = extractCompanies(text, companies);
+    const suggestion = getSuggestion(item.sentimentType, item.sentimentScore, mentioned);
+    return {
+      ...item,
+      mentionedCompanies: mentioned,
+      suggestion,
+    };
+  });
+
+  // Filter by sentiment if needed
+  const filteredNews =
+    sentimentFilter === "all"
+      ? displayNews
+      : displayNews.filter(n => n.sentimentType === sentimentFilter);
 
   return (
     <motion.div
@@ -103,12 +185,57 @@ const NationalNews = ({ sidebarWidth }) => {
           }
         `}</style>
       </div>
+
+      {/* Sentiment Filter Buttons */}
+      <div className="flex gap-3 justify-center my-4">
+        <button
+          className={`px-4 py-1 rounded-full font-semibold transition ${
+            sentimentFilter === "all"
+              ? "bg-blue-500 text-white"
+              : "bg-slate-700 text-blue-200 hover:bg-blue-600"
+          }`}
+          onClick={() => setSentimentFilter("all")}
+        >
+          All
+        </button>
+        <button
+          className={`px-4 py-1 rounded-full font-semibold transition ${
+            sentimentFilter === "positive"
+              ? "bg-green-500 text-white"
+              : "bg-slate-700 text-green-200 hover:bg-green-600"
+          }`}
+          onClick={() => setSentimentFilter("positive")}
+        >
+          Positive
+        </button>
+        <button
+          className={`px-4 py-1 rounded-full font-semibold transition ${
+            sentimentFilter === "neutral"
+              ? "bg-yellow-500 text-white"
+              : "bg-slate-700 text-yellow-200 hover:bg-yellow-600"
+          }`}
+          onClick={() => setSentimentFilter("neutral")}
+        >
+          Neutral
+        </button>
+        <button
+          className={`px-4 py-1 rounded-full font-semibold transition ${
+            sentimentFilter === "negative"
+              ? "bg-red-500 text-white"
+              : "bg-slate-700 text-red-200 hover:bg-red-600"
+          }`}
+          onClick={() => setSentimentFilter("negative")}
+        >
+          Negative
+        </button>
+      </div>
+
       {/* Content */}
       <div className="p-2 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-full text-center text-slate-400">Loading news...</div>
         ) : (
-          displayNews
+          filteredNews
             .filter(item =>
               !search ||
               item.headline.toLowerCase().includes(search.toLowerCase()) ||
@@ -136,9 +263,38 @@ const NationalNews = ({ sidebarWidth }) => {
                     </div>
                     <div className="text-xs text-blue-400">Relevance: {item.related}</div>
                     <div className="mt-2 text-xs">
-                      <span className={`font-bold ${sentiments[idx] > 1 ? "text-green-400" : sentiments[idx] < -1 ? "text-red-400" : "text-yellow-400"}`}>
-                        Sentiment: {sentiments[idx] > 1 ? "Positive" : sentiments[idx] < -1 ? "Negative" : "Neutral"}
+                      <span className={`font-bold ${item.sentimentType === "positive" ? "text-green-400" : item.sentimentType === "negative" ? "text-red-400" : "text-yellow-400"}`}>
+                        Sentiment: {item.sentimentType.charAt(0).toUpperCase() + item.sentimentType.slice(1)}
                       </span>
+                    </div>
+                    {/* Show mentioned companies and suggestion */}
+                    <div className="mt-2 text-xs">
+                      {item.mentionedCompanies.length > 0 ? (
+                        <span>
+                          <span className="font-semibold text-blue-300">Companies: </span>
+                          {item.mentionedCompanies.map(c => (
+                            <span key={c.ticker} className="mr-2">{c.name} ({c.ticker})</span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">  </span>
+                      )}  
+                    </div>
+                    <div className="mt-1 text-xs font-semibold text-purple-300">
+                      Suggestion: {item.suggestion}
+                    </div>
+                    {/* Show matched keywords */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {item.matchedKeywords && item.matchedKeywords.length > 0 && (
+                        item.matchedKeywords.map((kw, i) => (
+                          <span
+                            key={kw + i}
+                            className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-900 text-blue-200 border border-blue-400"
+                          >
+                            {kw}
+                          </span>
+                        ))
+                      )}
                     </div>
                     <div className="mt-2 text-xs text-blue-400 underline">Read full article</div>
                   </div>
@@ -151,4 +307,4 @@ const NationalNews = ({ sidebarWidth }) => {
   );
 };
 
-export default NationalNews;
+export default News;

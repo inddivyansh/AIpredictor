@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
 import Portfolio from "./pages/Portfolio";
@@ -12,9 +12,20 @@ import { useState, useEffect } from "react";
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_MINI = 64;
 
-function App() {
+function AppContent() {
   const [theme, setTheme] = useState("dark");
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH);
+  const [minimized, setMinimized] = useState(true); // Start minimized
+  const location = useLocation();
+
+  useEffect(() => {
+    // Minimize on home, expand elsewhere
+    if (location.pathname === "/home" || location.pathname === "/") {
+      setMinimized(true);
+    } else {
+      setMinimized(false);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -24,32 +35,44 @@ function App() {
   }, [theme]);
 
   return (
-    <BrowserRouter>
-      <Sidebar onSidebarToggle={setSidebarWidth} />
+    <>
+      <Sidebar
+        onSidebarToggle={setSidebarWidth}
+        minimized={minimized}
+        setMinimized={setMinimized}
+      />
       <div
         className="flex flex-col min-h-screen transition-all duration-500"
         style={{
-          marginLeft: sidebarWidth,
+          marginLeft: minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH,
           transition: "margin-left 0.45s cubic-bezier(.77,0,.18,1)",
         }}
       >
         <Routes>
-          <Route path="/home" element={<Home sidebarWidth={sidebarWidth} />} />
-          <Route path="/portfolio" element={<Portfolio sidebarWidth={sidebarWidth} />} />
-          <Route path="/nationalnews" element={<News sidebarWidth={sidebarWidth} />} />
-          <Route path="/aiprediction" element={<AIPrediction sidebarWidth={sidebarWidth} />} />
-          <Route path="/impact" element={<Impact sidebarWidth={sidebarWidth} />} />
-          <Route path="/suggestions" element={<Suggestions sidebarWidth={sidebarWidth} />} />
+          <Route path="/home" element={<Home sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
+          <Route path="/portfolio" element={<Portfolio sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
+          <Route path="/nationalnews" element={<News sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
+          <Route path="/aiprediction" element={<AIPrediction sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
+          <Route path="/impact" element={<Impact sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
+          <Route path="/suggestions" element={<Suggestions sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
           <Route path="/settings" element={
             <Settings
               onThemeToggle={() => setTheme(t => t === "dark" ? "light" : "dark")}
               theme={theme}
-              sidebarWidth={sidebarWidth}
+              sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH}
             />
           } />
-          <Route path="*" element={<Home sidebarWidth={sidebarWidth} />} />
+          <Route path="*" element={<Home sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
         </Routes>
       </div>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }
