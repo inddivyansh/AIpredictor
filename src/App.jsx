@@ -8,6 +8,7 @@ import Impact from "./pages/Impact";
 import Suggestions from "./pages/Suggestions";
 import Settings from "./pages/Settings";
 import { useState, useEffect } from "react";
+import { Analytics } from '@vercel/analytics/react';
 
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_MINI = 64;
@@ -65,6 +66,7 @@ function AppContent() {
           <Route path="*" element={<Home sidebarWidth={minimized ? SIDEBAR_MINI : SIDEBAR_WIDTH} />} />
         </Routes>
       </div>
+      <Analytics />
     </>
   );
 }
