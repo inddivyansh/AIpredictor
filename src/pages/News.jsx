@@ -97,11 +97,11 @@ const News = ({ sidebarWidth }) => {
 
   // Filter Indian news based on keywords from articleFilterList
   const filterKeywords = articleFilterList.map(f => f.keyword.toLowerCase());
-  const indianNews = articles.filter(
-    n =>
-      filterKeywords.some(kw =>
-        (n.headline + n.summary).toLowerCase().includes(kw)
-      )
+  const indianNews = articles.filter(n =>
+    filterKeywords.some(kw => {
+      const regex = new RegExp(`\\b${kw}\\b`, "i");
+      return regex.test((n.headline + " " + n.summary));
+    })
   );
   // If no Indian news, show all news
   let displayNews = indianNews.length > 0 ? indianNews : articles;
