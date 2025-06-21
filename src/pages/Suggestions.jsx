@@ -4,10 +4,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchBusinessNews, fetchTopGainers, fetchTopLosers } from "../services/finnhubApi";
 import { Search, LogIn, UserPlus, Lightbulb, ExternalLink, X } from "lucide-react";
 import Sentiment from "sentiment";
+import companyList from "../data/companyList.json";
 
-const trackedStocks = [
-  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "LT", "AXISBANK", "HCLTECH", "BAJFINANCE", "ITC", "KOTAKBANK"
-];
+function shuffleArray(array) {
+  // Fisher-Yates shuffle
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 const Suggestions = ({ sidebarWidth }) => {
   const [stripType, setStripType] = useState("gainers");
@@ -39,22 +46,14 @@ const Suggestions = ({ sidebarWidth }) => {
     setLoading(true);
     fetchBusinessNews("IN", 30).then(news => {
       const sentiment = new Sentiment();
-      const suggestions = trackedStocks.map(stock => {
+      // Find companies with at least one matching article
+      const matchedSuggestions = companyList.map(company => {
+        const regex = new RegExp(`\\b${company.name}\\b`, "i");
         const related = news.filter(
-          n =>
-            n.headline.toLowerCase().includes(stock.toLowerCase()) ||
-            n.summary.toLowerCase().includes(stock.toLowerCase())
+          n => regex.test(n.headline || "") || regex.test(n.summary || "")
         );
-        if (!related.length) {
-          return {
-            stock,
-            action: "Hold",
-            reason: "No recent news found. Hold position.",
-            icon: <Lightbulb size={28} className="text-yellow-400" />,
-            relatedNews: [],
-          };
-        }
-        const avg = related.reduce((sum, n) => sum + sentiment.analyze(n.summary).score, 0) / related.length;
+        if (related.length === 0) return null;
+        const avg = related.reduce((sum, n) => sum + sentiment.analyze(n.summary || "").score, 0) / related.length;
         let action = "Hold";
         let icon = <Lightbulb size={28} className="text-yellow-400" />;
         if (avg > 1) {
@@ -65,14 +64,37 @@ const Suggestions = ({ sidebarWidth }) => {
           icon = <Lightbulb size={28} className="text-red-400" />;
         }
         return {
-          stock,
+          stock: company.name,
           action,
           reason: `Avg sentiment from ${related.length} news: ${avg.toFixed(2)}`,
           icon,
           relatedNews: related,
         };
-      });
-      setAiSuggestions(suggestions);
+      }).filter(Boolean);
+
+      // If none match, show any 12 shuffled companies with dummy news
+      if (matchedSuggestions.length === 0) {
+        const shuffled = shuffleArray(companyList).slice(0, 12);
+        setAiSuggestions(
+          shuffled.map(company => ({
+            stock: company.name,
+            action: "Hold",
+            reason: "No recent news found. Hold position.",
+            icon: <Lightbulb size={28} className="text-yellow-400" />,
+            relatedNews: [
+              {
+                source: "Moneycontrol",
+                headline: "No news available for this company.",
+                summary: "There are currently no news articles related to this company.",
+                url: `https://www.moneycontrol.com/`,
+                datetime: null
+              }
+            ],
+          }))
+        );
+      } else {
+        setAiSuggestions(matchedSuggestions);
+      }
       setLoading(false);
     });
   }, []);

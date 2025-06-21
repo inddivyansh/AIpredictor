@@ -109,7 +109,10 @@ const News = ({ sidebarWidth }) => {
   // Attach sentiment type and matched keywords to each news
   displayNews = displayNews.map((item, idx) => {
     const text = (item.headline + " " + item.summary).toLowerCase();
-    const matchedKeywords = filterKeywords.filter(kw => text.includes(kw));
+    const matchedKeywords = filterKeywords.filter(kw => {
+      const regex = new RegExp(`\\b${kw}\\b`, "i");
+      return regex.test(text);
+    });
     return {
       ...item,
       sentimentType: getSentimentType(sentiments[idx] ?? 0),
